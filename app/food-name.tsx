@@ -17,7 +17,7 @@ export default function FoodNameScreen() {
   const params = useLocalSearchParams();
   const [foodName, setFoodName] = useState(params.scannedData?.toString() || '');
 
-  const handleChipPress = (food) => {
+  const handleChipPress = (food: any) => {
     setFoodName(food);
   };
 

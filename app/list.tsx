@@ -2,8 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, FlatList } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, Link } from 'expo-router';
+import { AntDesign } from '@expo/vector-icons'; // Import trash icon
 
-// Sample data - in a real app, this would come from storage
 const initialItems = [
   { id: '1', name: 'Cuisse de poulet', expiryDate: new Date(2023, 2, 28) },
   { id: '2', name: 'Jus de fruit', expiryDate: new Date(2023, 2, 30) },
@@ -17,14 +17,13 @@ export default function ListScreen() {
   const params = useLocalSearchParams();
   const [items, setItems] = useState(initialItems);
   const today = new Date();
-  
+
   useEffect(() => {
-    // If a new item was added, update the list
     if (params.newItemName && params.newItemDate) {
       const name = params.newItemName.toString();
       const expiryDate = new Date(params.newItemDate.toString());
       const newId = (items.length + 1).toString();
-      
+
       setItems(prevItems => [...prevItems, { id: newId, name, expiryDate }]);
     }
   }, [params.newItemName, params.newItemDate]);
@@ -37,17 +36,21 @@ export default function ListScreen() {
     return date < today;
   };
 
+  const handleDelete = (id) => {
+    setItems(prevItems => prevItems.filter(item => item.id !== id));
+  };
+
   const renderItem = ({ item }) => (
     <View style={styles.itemRow}>
       <View style={styles.bulletPoint} />
       <Text style={styles.itemName}>{item.name}</Text>
       <View style={styles.dateLine} />
-      <Text style={[
-        styles.itemDate, 
-        isPastDate(item.expiryDate) ? styles.pastDate : styles.futureDate
-      ]}>
+      <Text style={[styles.itemDate, isPastDate(item.expiryDate) ? styles.pastDate : styles.futureDate]}>
         {formatDate(item.expiryDate)}
       </Text>
+      <TouchableOpacity onPress={() => handleDelete(item.id)} style={styles.deleteButton}>
+        <AntDesign name="delete" size={18} color="red" />
+      </TouchableOpacity>
     </View>
   );
 
@@ -65,9 +68,9 @@ export default function ListScreen() {
           scrollEnabled={false}
         />
       </View>
-      
+
       <View style={styles.divider} />
-      
+
       <View style={styles.listSection}>
         <Text style={styles.sectionTitle}>Date à venir :</Text>
         <FlatList
@@ -77,7 +80,7 @@ export default function ListScreen() {
           scrollEnabled={false}
         />
       </View>
-      
+
       <Link href="/" asChild>
         <TouchableOpacity style={styles.menuButton}>
           <Text style={styles.menuButtonText}>Menu</Text>
@@ -140,6 +143,10 @@ const styles = StyleSheet.create({
   },
   futureDate: {
     color: '#4EBEB3',
+  },
+  deleteButton: {
+    marginLeft: 10,
+    padding: 5,
   },
   menuButton: {
     backgroundColor: '#4EBEB3',
