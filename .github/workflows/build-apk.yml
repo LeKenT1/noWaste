@@ -36,6 +36,13 @@ jobs:
           cd android
           ./gradlew assembleDebug
 
+          - name: Verify APK exists
+          run: |
+            if [ ! -f android/app/build/outputs/apk/debug/app-debug.apk ]; then
+              echo "APK not found!"
+              exit 1
+            fi        
+
       - name: Upload APK
         uses: actions/upload-artifact@v3
         with:
