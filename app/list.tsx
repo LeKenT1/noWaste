@@ -4,44 +4,64 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Link } from 'expo-router';
 import Realm from 'realm';
 import realmConfig from '../database/realmConfig';
+import { Aliment } from '@/models/aliment';
 
 export default function ListScreen() {
-  const [items, setItems] = useState([]);
-  const [realmInstance, setRealmInstance] = useState(null);
+  const [items, setItems] = useState<Aliment[]>([]);
+  const [realmInstance, setRealmInstance] = useState<Realm | null>(null);
   const today = new Date();
 
   useEffect(() => {
-    let realm;
-    // Ouvrir Realm avec notre configuration
-    Realm.open(realmConfig).then(r => {
-      realm = r;
-      setRealmInstance(r);
-      const aliments = r.objects('Aliment');
-      // Écoute des changements sur la collection
-      aliments.addListener((collection, changes) => {
-        setItems([...collection]);
-      });
-      setItems([...aliments]);
-    });
+    let realm: Realm | null = null;
+
+    const initRealm = async () => {
+      try {
+        const r = await Realm.open(realmConfig);
+        realm = r;
+        setRealmInstance(r);
+
+        const aliments = r.objects<Aliment>('Aliment');
+        
+        const updateItems = () => {
+          setItems([...aliments]);
+        };
+
+        updateItems();
+
+        r.addListener('change', updateItems);
+
+        return () => {
+          if (realm && !realm.isClosed) {
+            realm.removeAllListeners();
+            realm.close();
+          }
+        };
+      } catch (error) {
+        console.error('Error initializing Realm:', error);
+      }
+    };
+
+    initRealm();
+
     return () => {
-      // Fermer Realm lors du démontage
-      if (realm && !realm.isClosed) {
-        realm.close();
+      if (realmInstance && !realmInstance.isClosed) {
+        realmInstance.removeAllListeners();
+        realmInstance.close();
       }
     };
   }, []);
 
-  const formatDate = (date) =>
+  const formatDate = (date: Date): string =>
     `${date.getDate().toString().padStart(2, '0')}/${(date.getMonth() + 1)
       .toString()
       .padStart(2, '0')}`;
 
-  const isPastDate = (date) => date < today;
+  const isPastDate = (date: Date): boolean => date < today;
 
-  const handleDelete = (id) => {
+  const handleDelete = (id: string) => {
     if (realmInstance) {
       realmInstance.write(() => {
-        const toDelete = realmInstance.objectForPrimaryKey('Aliment', id);
+        const toDelete = realmInstance.objectForPrimaryKey<Aliment>('Aliment', id);
         if (toDelete) {
           realmInstance.delete(toDelete);
         }
@@ -49,7 +69,7 @@ export default function ListScreen() {
     }
   };
 
-  const renderItem = ({ item }) => (
+  const renderItem = ({ item }: { item: Aliment }) => (
     <View style={styles.itemRow}>
       <View style={styles.bulletPoint} />
       <Text style={styles.itemName}>{item.nom}</Text>
