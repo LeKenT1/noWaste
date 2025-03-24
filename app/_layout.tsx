@@ -10,7 +10,6 @@ import realmConfig from '../database/realmConfig';
 
 const BACKGROUND_TASK = "check-expiring-aliments";
 
-// Define background task
 TaskManager.defineTask(BACKGROUND_TASK, async () => {
   try {
     const realm = await Realm.open(realmConfig);
@@ -25,11 +24,11 @@ TaskManager.defineTask(BACKGROUND_TASK, async () => {
     for (let aliment of expiringAliments) {
       await Notifications.scheduleNotificationAsync({
         content: {
-          title: "Expiration Alert",
-          body: `The aliment "${aliment.nom}" will expire in 24 hours.`,
+          title: "Alerte expiration",
+          body: `L'aliment "${aliment.nom}" va expirer dans moins de 24h`,
           sound: true,
         },
-        trigger: null, // Send immediately
+        trigger: null,
       });
     }
 
@@ -41,12 +40,11 @@ TaskManager.defineTask(BACKGROUND_TASK, async () => {
   }
 });
 
-// Function to register background task
 async function registerBackgroundTask() {
   const isRegistered = await TaskManager.isTaskRegisteredAsync(BACKGROUND_TASK);
   if (!isRegistered) {
     await BackgroundFetch.registerTaskAsync(BACKGROUND_TASK, {
-      minimumInterval: 60 * 60, // Runs every hour
+      minimumInterval: 60 * 60,
       stopOnTerminate: false,
       startOnBoot: true,
     });
@@ -56,6 +54,13 @@ async function registerBackgroundTask() {
 export default function RootLayout() {
   useEffect(() => {
     async function setupNotifications() {
+      Notifications.setNotificationHandler({
+        handleNotification: async () => ({
+          shouldShowAlert: true,
+          shouldPlaySound: true,
+          shouldSetBadge: true,
+        }),
+      });
       const { status } = await Notifications.requestPermissionsAsync();
       if (status !== 'granted') {
         alert('Permission for notifications is required!');
@@ -63,6 +68,7 @@ export default function RootLayout() {
       }
 
       await registerBackgroundTask();
+      const scheduled = await Notifications.getAllScheduledNotificationsAsync();
     }
 
     setupNotifications();
@@ -71,7 +77,7 @@ export default function RootLayout() {
   return (
     <SafeAreaProvider>
       <StatusBar style="auto" />
-      <Stack 
+      <Stack
         screenOptions={{
           headerShown: false,
           contentStyle: { backgroundColor: 'white' }
