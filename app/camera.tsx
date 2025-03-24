@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
-import { Camera } from 'expo-camera';
-// import { BarCodeScanner } from 'expo-barcode-scanner';
+import { Camera, BarCodeType } from 'expo-camera';
 import { useRouter } from 'expo-router';
 
 export default function CameraScreen() {
@@ -26,10 +25,18 @@ export default function CameraScreen() {
   };
 
   if (hasPermission === null) {
-    return <View style={styles.container}><Text>Requesting camera permission...</Text></View>;
+    return (
+      <View style={styles.container}>
+        <Text>Requesting camera permission...</Text>
+      </View>
+    );
   }
   if (hasPermission === false) {
-    return <View style={styles.container}><Text>No access to camera</Text></View>;
+    return (
+      <View style={styles.container}>
+        <Text>No access to camera</Text>
+      </View>
+    );
   }
 
   return (
@@ -38,7 +45,7 @@ export default function CameraScreen() {
         style={styles.camera}
         type={Camera.Constants.Type.back}
         barCodeScannerSettings={{
-          barCodeTypes: [BarCodeScanner.Constants.BarCodeType.ean13],
+          barCodeTypes: [BarCodeType.ean13],
         }}
         onBarCodeScanned={scanned ? undefined : handleBarCodeScanned}
       >
@@ -55,7 +62,10 @@ export default function CameraScreen() {
               <Text style={styles.cameraModeInactive}>PANO</Text>
             </View>
             <View style={styles.shutterContainer}>
-              <TouchableOpacity style={styles.shutterButton} onPress={() => setScanned(false)}>
+              <TouchableOpacity
+                style={styles.shutterButton}
+                onPress={() => setScanned(false)}
+              >
                 <View style={styles.shutterInner} />
               </TouchableOpacity>
               <TouchableOpacity style={styles.flipButton}>
@@ -65,10 +75,10 @@ export default function CameraScreen() {
           </View>
         </View>
       </Camera>
-      
+
       {scanned && (
-        <TouchableOpacity 
-          style={styles.scanAgainButton} 
+        <TouchableOpacity
+          style={styles.scanAgainButton}
           onPress={() => setScanned(false)}
         >
           <Text style={styles.scanAgainText}>Scan Again</Text>
