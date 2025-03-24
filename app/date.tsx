@@ -1,31 +1,42 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRouter, useLocalSearchParams, Link } from 'expo-router';
+import { useRouter, Link, useLocalSearchParams  } from 'expo-router';
 import DateTimePicker from '@react-native-community/datetimepicker';
+import Realm from 'realm';
+import realmConfig from '../database/realmConfig';
+import uuid from 'react-native-uuid';
 
 export default function DateScreen() {
   const router = useRouter();
-  const params = useLocalSearchParams();
-  const foodName = params.foodName?.toString() || '';
-  
+  const params = useLocalSearchParams()
+
+
+  const foodName = params.foodName ?? "Nouveau Aliment";
   const [date, setDate] = useState(new Date());
   const [showPicker, setShowPicker] = useState(false);
 
-  const handleDateChange = (event: any, selectedDate: any) => {
+  const handleDateChange = (event, selectedDate) => {
     const currentDate = selectedDate || date;
     setShowPicker(false);
     setDate(currentDate);
   };
 
-  const handleSave = () => {
-    router.push({
-      pathname: '/list',
-      params: { 
-        newItemName: foodName,
-        newItemDate: date.toISOString()
-      }
-    });
+  const handleSave = async () => {
+    try {
+      const realm = await Realm.open(realmConfig);
+      realm.write(() => {
+        realm.create('Aliment', {
+          id: uuid.v4().toString(),
+          nom: foodName,
+          datePeremption: date,
+        });
+      });
+      realm.close();
+      router.push('/list');
+    } catch (error) {
+      console.error('Erreur lors de l\'insertion dans Realm', error);
+    }
   };
 
   return (
@@ -37,7 +48,6 @@ export default function DateScreen() {
         <Text style={styles.dateButtonText}>Sélectionner une date</Text>
       </TouchableOpacity>
 
-      {/* Display selected date in the middle */}
       <Text style={styles.selectedDateText}>{date.toLocaleDateString()}</Text>
 
       {showPicker && (
@@ -117,4 +127,3 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
 });
-

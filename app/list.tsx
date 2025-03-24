@@ -1,61 +1,75 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, FlatList } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useLocalSearchParams, Link } from 'expo-router';
-import { AntDesign } from '@expo/vector-icons'; // Import trash icon
-
-const initialItems = [
-  { id: '1', name: 'Cuisse de poulet', expiryDate: new Date(2023, 2, 28) },
-  { id: '2', name: 'Jus de fruit', expiryDate: new Date(2023, 2, 30) },
-  { id: '3', name: 'Yaourt', expiryDate: new Date(2023, 3, 2) },
-  { id: '4', name: 'Cuisse de poulet', expiryDate: new Date(2023, 3, 6) },
-  { id: '5', name: 'Jus de fruit', expiryDate: new Date(2023, 3, 8) },
-  { id: '6', name: 'Yaourt', expiryDate: new Date(2023, 3, 11) },
-];
+import { Link } from 'expo-router';
+import Realm from 'realm';
+import realmConfig from '../database/realmConfig';
 
 export default function ListScreen() {
-  const params = useLocalSearchParams();
-  const [items, setItems] = useState(initialItems);
+  const [items, setItems] = useState([]);
+  const [realmInstance, setRealmInstance] = useState(null);
   const today = new Date();
 
   useEffect(() => {
-    if (params.newItemName && params.newItemDate) {
-      const name = params.newItemName.toString();
-      const expiryDate = new Date(params.newItemDate.toString());
-      const newId = (items.length + 1).toString();
+    let realm;
+    // Ouvrir Realm avec notre configuration
+    Realm.open(realmConfig).then(r => {
+      realm = r;
+      setRealmInstance(r);
+      const aliments = r.objects('Aliment');
+      // Écoute des changements sur la collection
+      aliments.addListener((collection, changes) => {
+        setItems([...collection]);
+      });
+      setItems([...aliments]);
+    });
+    return () => {
+      // Fermer Realm lors du démontage
+      if (realm && !realm.isClosed) {
+        realm.close();
+      }
+    };
+  }, []);
 
-      setItems(prevItems => [...prevItems, { id: newId, name, expiryDate }]);
-    }
-  }, [params.newItemName, params.newItemDate]);
+  const formatDate = (date) =>
+    `${date.getDate().toString().padStart(2, '0')}/${(date.getMonth() + 1)
+      .toString()
+      .padStart(2, '0')}`;
 
-  const formatDate = (date) => {
-    return `${date.getDate().toString().padStart(2, '0')}/${(date.getMonth() + 1).toString().padStart(2, '0')}`;
-  };
-
-  const isPastDate = (date) => {
-    return date < today;
-  };
+  const isPastDate = (date) => date < today;
 
   const handleDelete = (id) => {
-    setItems(prevItems => prevItems.filter(item => item.id !== id));
+    if (realmInstance) {
+      realmInstance.write(() => {
+        const toDelete = realmInstance.objectForPrimaryKey('Aliment', id);
+        if (toDelete) {
+          realmInstance.delete(toDelete);
+        }
+      });
+    }
   };
 
   const renderItem = ({ item }) => (
     <View style={styles.itemRow}>
       <View style={styles.bulletPoint} />
-      <Text style={styles.itemName}>{item.name}</Text>
+      <Text style={styles.itemName}>{item.nom}</Text>
       <View style={styles.dateLine} />
-      <Text style={[styles.itemDate, isPastDate(item.expiryDate) ? styles.pastDate : styles.futureDate]}>
-        {formatDate(item.expiryDate)}
+      <Text
+        style={[
+          styles.itemDate,
+          isPastDate(item.datePeremption) ? styles.pastDate : styles.futureDate,
+        ]}
+      >
+        {formatDate(item.datePeremption)}
       </Text>
       <TouchableOpacity onPress={() => handleDelete(item.id)} style={styles.deleteButton}>
-        <AntDesign name="delete" size={18} color="red" />
+        <Text style={{ color: 'red' }}>X</Text>
       </TouchableOpacity>
     </View>
   );
 
-  const pastItems = items.filter(item => isPastDate(item.expiryDate));
-  const futureItems = items.filter(item => !isPastDate(item.expiryDate));
+  const pastItems = items.filter(item => isPastDate(item.datePeremption));
+  const futureItems = items.filter(item => !isPastDate(item.datePeremption));
 
   return (
     <SafeAreaView style={styles.container}>
