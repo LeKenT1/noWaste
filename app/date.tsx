@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRouter, Link, useLocalSearchParams  } from 'expo-router';
+import { useRouter, Link, useLocalSearchParams } from 'expo-router';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import Realm from 'realm';
 import realmConfig from '../database/realmConfig';
@@ -11,12 +11,13 @@ export default function DateScreen() {
   const router = useRouter();
   const params = useLocalSearchParams()
 
-
-  const foodName = params.foodName ?? "Nouveau Aliment";
+  console.log('params', params);
+  
+  const foodName = params.foodName ?? "Nouvel Aliment";
   const [date, setDate] = useState(new Date());
   const [showPicker, setShowPicker] = useState(false);
 
-  const handleDateChange = (event, selectedDate) => {
+  const handleDateChange = (event: any, selectedDate: any) => {
     const currentDate = selectedDate || date;
     setShowPicker(false);
     setDate(currentDate);
@@ -41,7 +42,11 @@ export default function DateScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <TouchableOpacity 
+      <Text style={styles.foodnameText}>
+        {foodName}
+      </Text>
+
+      <TouchableOpacity
         style={styles.dateButton}
         onPress={() => setShowPicker(true)}
       >
@@ -58,15 +63,15 @@ export default function DateScreen() {
           onChange={handleDateChange}
         />
       )}
-      
+
       <View style={styles.buttonContainer}>
         <Link href="/food-name" asChild>
           <TouchableOpacity style={styles.button}>
             <Text style={styles.buttonText}>Retour</Text>
           </TouchableOpacity>
         </Link>
-        
-        <TouchableOpacity 
+
+        <TouchableOpacity
           style={[styles.button, styles.saveButton]}
           onPress={handleSave}
         >
@@ -84,17 +89,24 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     backgroundColor: 'white',
     paddingHorizontal: 20,
+    paddingTop: 20,
   },
   dateButton: {
     backgroundColor: '#4EBEB3',
     paddingHorizontal: 30,
     paddingVertical: 15,
     borderRadius: 25,
-    marginBottom: 100,
+    marginBottom: 50,
   },
   dateButtonText: {
     color: 'white',
     fontSize: 16,
+  },
+  foodnameText: {
+    fontSize: 26, // Increase font size
+    fontWeight: 'bold',
+    color: '#333',
+    marginBottom: 250, // Space below the food name
   },
   selectedDateText: {
     fontSize: 18,

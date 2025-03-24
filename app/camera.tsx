@@ -1,89 +1,83 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
-import { Camera, BarCodeType } from 'expo-camera';
+import { View, Text, StyleSheet, TouchableOpacity, Button, Alert } from 'react-native';
+import { CameraView, CameraType, useCameraPermissions } from 'expo-camera';
 import { useRouter } from 'expo-router';
+import { fetchProductData } from '@/services/openFoodFacts';
 
 export default function CameraScreen() {
-  const [hasPermission, setHasPermission] = useState(null);
+  const [permission, requestPermission] = useCameraPermissions();
   const [scanned, setScanned] = useState(false);
+  const [alertShown, setAlertShown] = useState(false);
+  const [facing, setFacing] = useState<CameraType>('back');
   const router = useRouter();
 
-  useEffect(() => {
-    (async () => {
-      const { status } = await Camera.requestCameraPermissionsAsync();
-      setHasPermission(status === 'granted');
-    })();
-  }, []);
+  if (!permission) {
+    return <View />;
+  }
 
-  const handleBarCodeScanned = ({ type, data }) => {
-    setScanned(true);
-    // Navigate to the FoodName screen with the scanned data
-    router.push({
-      pathname: '/food-name',
-      params: { scannedData: data }
-    });
-  };
-
-  if (hasPermission === null) {
+  if (!permission.granted) {
     return (
       <View style={styles.container}>
-        <Text>Requesting camera permission...</Text>
+        <Text>We need your permission to show the camera</Text>
+        <Button onPress={requestPermission} title="Permission accordée" />
       </View>
     );
   }
-  if (hasPermission === false) {
-    return (
-      <View style={styles.container}>
-        <Text>No access to camera</Text>
-      </View>
-    );
+
+  const handleBarCodeScanned = async ({ type, data }: { type: string; data: string }) => {
+    if (scanned || alertShown) return; // Empêcher plusieurs scans et alertes en boucle
+
+    setScanned(true);
+    const productName = await fetchProductData(data);
+
+    if (productName) {
+      router.push({
+        pathname: "/date",
+        params: { foodName: productName },
+      });
+    } else {
+      setAlertShown(true);
+      Alert.alert("Produit introuvable", "Veuillez réessayer.", [
+        {
+          text: "OK", onPress: () => {
+            setAlertShown(false);
+            setScanned(false); // Autoriser un nouveau scan après confirmation
+          }
+        },
+      ]);
+    }
+  };
+
+  function toggleCameraFacing() {
+    setFacing(current => (current === 'back' ? 'front' : 'back'));
   }
 
   return (
     <View style={styles.container}>
-      <Camera
-        style={styles.camera}
-        type={Camera.Constants.Type.back}
-        barCodeScannerSettings={{
-          barCodeTypes: [BarCodeType.ean13],
-        }}
-        onBarCodeScanned={scanned ? undefined : handleBarCodeScanned}
-      >
+      <CameraView style={styles.camera} facing={facing} onBarcodeScanned={handleBarCodeScanned} barcodeScannerSettings={{
+        barcodeTypes: ["ean13"],
+      }}>
+        {/* Cadre de scan */}
         <View style={styles.overlay}>
           <View style={styles.scanArea}>
-            {/* Barcode scanning area */}
-          </View>
-          <View style={styles.cameraControls}>
-            <View style={styles.cameraModesContainer}>
-              <Text style={styles.cameraModeInactive}>AUTOMATIQUE</Text>
-              <Text style={styles.cameraModeInactive}>VIDÉO</Text>
-              <Text style={styles.cameraModeActive}>PHOTO</Text>
-              <Text style={styles.cameraModeInactive}>PORTRAIT</Text>
-              <Text style={styles.cameraModeInactive}>PANO</Text>
-            </View>
-            <View style={styles.shutterContainer}>
-              <TouchableOpacity
-                style={styles.shutterButton}
-                onPress={() => setScanned(false)}
-              >
-                <View style={styles.shutterInner} />
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.flipButton}>
-                <View style={styles.flipIcon} />
-              </TouchableOpacity>
+            <View style={styles.scanBox}>
+              {/* Coins du cadre */}
+              <View style={[styles.corner, styles.topLeft]} />
+              <View style={[styles.corner, styles.topRight]} />
+              <View style={[styles.corner, styles.bottomLeft]} />
+              <View style={[styles.corner, styles.bottomRight]} />
             </View>
           </View>
         </View>
-      </Camera>
 
-      {scanned && (
-        <TouchableOpacity
-          style={styles.scanAgainButton}
-          onPress={() => setScanned(false)}
-        >
-          <Text style={styles.scanAgainText}>Scan Again</Text>
-        </TouchableOpacity>
-      )}
+        {/* Bouton pour changer de caméra */}
+        <View style={styles.buttonContainer}>
+          <TouchableOpacity style={styles.button} onPress={toggleCameraFacing}>
+            <Text style={styles.text}>Flip Camera</Text>
+          </TouchableOpacity>
+        </View>
+      </CameraView>
+
     </View>
   );
 }
@@ -95,16 +89,6 @@ const styles = StyleSheet.create({
   },
   camera: {
     flex: 1,
-  },
-  overlay: {
-    flex: 1,
-    backgroundColor: 'transparent',
-    justifyContent: 'space-between',
-  },
-  scanArea: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
   },
   cameraControls: {
     height: 120,
@@ -176,4 +160,82 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: 'bold',
   },
+  message: {
+    textAlign: 'center',
+    paddingBottom: 10,
+  },
+  buttonContainer: {
+    flex: 1,
+    flexDirection: 'row',
+    backgroundColor: 'transparent',
+    margin: 64,
+  },
+  button: {
+    flex: 1,
+    alignSelf: 'flex-end',
+    alignItems: 'center',
+  },
+  text: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: 'white',
+  },
+  overlay: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "transparent",
+  },
+
+  scanArea: {
+    width: "80%",
+    height: "40%",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+
+  scanBox: {
+    width: 250,
+    height: 250,
+    borderWidth: 2,
+    borderColor: "rgba(255, 255, 255, 0.7)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+
+  corner: {
+    position: "absolute",
+    width: 30,
+    height: 30,
+    borderColor: "#00FF00",
+  },
+
+  topLeft: {
+    top: -2,
+    left: -2,
+    borderLeftWidth: 4,
+    borderTopWidth: 4,
+  },
+
+  topRight: {
+    top: -2,
+    right: -2,
+    borderRightWidth: 4,
+    borderTopWidth: 4,
+  },
+
+  bottomLeft: {
+    bottom: -2,
+    left: -2,
+    borderLeftWidth: 4,
+    borderBottomWidth: 4,
+  },
+
+  bottomRight: {
+    bottom: -2,
+    right: -2,
+    borderRightWidth: 4,
+    borderBottomWidth: 4,
+  },
+
 });
