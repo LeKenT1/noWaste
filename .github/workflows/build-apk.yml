@@ -39,7 +39,7 @@ jobs:
         run: npm install -g eas-cli
 
       - name: Login to Expo
-        run: echo "${{ secrets.EXPO_TOKEN }}" | eas login --non-interactive
+        run: npx eas-cli login:ci ${{ secrets.EXPO_TOKEN }}
 
       - name: Prebuild Expo project
         run: npx expo prebuild --platform android
