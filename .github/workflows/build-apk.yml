@@ -38,13 +38,12 @@ jobs:
       - name: Install EAS CLI
         run: npm install -g eas-cli
 
-      - name: Login to Expo
-        run: npx eas-cli login:ci ${{ secrets.EXPO_TOKEN }}
-
       - name: Prebuild Expo project
         run: npx expo prebuild --platform android
 
       - name: Build Android APK with EAS
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
         run: eas build -p android
 
       - name: Upload APK artifact
