@@ -115,11 +115,11 @@ export default function ListScreen() {
         />
       </View>
 
-      <Link href="/" asChild>
+      {/* <Link href="/" asChild>
         <TouchableOpacity style={styles.menuButton}>
           <Text style={styles.menuButtonText}>Menu</Text>
         </TouchableOpacity>
-      </Link>
+      </Link> */}
     </SafeAreaView>
   );
 }
