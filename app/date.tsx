@@ -1,29 +1,37 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRouter, Link, useLocalSearchParams } from 'expo-router';
-import DateTimePicker from '@react-native-community/datetimepicker';
+import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import Realm from 'realm';
 import realmConfig from '../database/realmConfig';
 import uuid from 'react-native-uuid';
+import { scheduleNotification } from '../services/notifications';
 
-export default function DateScreen() {
-  const router = useRouter();
-  const params = useLocalSearchParams()
+type RootStackParamList = {
+  Date: { foodName: string };
+  List: undefined;
+};
 
-  console.log('params', params);
-  
-  const foodName = params.foodName ?? "Nouvel Aliment";
-  const [date, setDate] = useState(new Date());
-  const [showPicker, setShowPicker] = useState(false);
+type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'Date'>;
+type DateRouteProp = RouteProp<RootStackParamList, 'Date'>;
 
-  const handleDateChange = (event: any, selectedDate: any) => {
-    const currentDate = selectedDate || date;
+export default function DateScreen(): JSX.Element {
+  const navigation = useNavigation<NavigationProp>();
+  const route = useRoute<DateRouteProp>();
+  const foodName = route.params.foodName;
+  const [date, setDate] = useState<Date>(new Date());
+  const [showPicker, setShowPicker] = useState<boolean>(false);
+
+  const handleDateChange = (event: DateTimePickerEvent, selectedDate?: Date): void => {
     setShowPicker(false);
-    setDate(currentDate);
+    if (selectedDate) {
+      setDate(selectedDate);
+    }
   };
 
-  const handleSave = async () => {
+  const handleSave = async (): Promise<void> => {
     try {
       const realm = await Realm.open(realmConfig);
       realm.write(() => {
@@ -34,7 +42,14 @@ export default function DateScreen() {
         });
       });
       realm.close();
-      router.push('/list');
+
+      await scheduleNotification(
+        'Aliment à consommer',
+        `Votre ${foodName} arrive à expiration aujourd'hui!`,
+        date
+      );
+
+      navigation.navigate('List');
     } catch (error) {
       console.error('Erreur lors de l\'insertion dans Realm', error);
     }
@@ -65,12 +80,6 @@ export default function DateScreen() {
       )}
 
       <View style={styles.buttonContainer}>
-        <Link href="/food-name" asChild>
-          <TouchableOpacity style={styles.button}>
-            <Text style={styles.buttonText}>Retour</Text>
-          </TouchableOpacity>
-        </Link>
-
         <TouchableOpacity
           style={[styles.button, styles.saveButton]}
           onPress={handleSave}
@@ -103,10 +112,10 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
   foodnameText: {
-    fontSize: 26, // Increase font size
+    fontSize: 26,
     fontWeight: 'bold',
     color: '#333',
-    marginBottom: 250, // Space below the food name
+    marginBottom: 250,
   },
   selectedDateText: {
     fontSize: 18,

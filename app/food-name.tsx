@@ -1,7 +1,17 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, TextInput, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRouter, useLocalSearchParams, Link } from 'expo-router';
+import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+
+type RootStackParamList = {
+  FoodName: { scannedData?: string };
+  Date: { foodName: string };
+  Home: undefined;
+};
+
+type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
+type FoodNameRouteProp = RouteProp<RootStackParamList, 'FoodName'>;
 
 const foodSuggestions = [
   'Poulet',
@@ -13,20 +23,17 @@ const foodSuggestions = [
 ];
 
 export default function FoodNameScreen() {
-  const router = useRouter();
-  const params = useLocalSearchParams();
-  const [foodName, setFoodName] = useState(params.scannedData?.toString() || '');
+  const navigation = useNavigation<NavigationProp>();
+  const route = useRoute<FoodNameRouteProp>();
+  const [foodName, setFoodName] = useState(route.params?.scannedData || '');
 
-  const handleChipPress = (food: any) => {
+  const handleChipPress = (food: string) => {
     setFoodName(food);
   };
 
   const handleNext = () => {
     if (foodName.trim()) {
-      router.push({
-        pathname: '/date',
-        params: { foodName }
-      });
+      navigation.navigate('Date', { foodName });
     }
   };
 
@@ -68,12 +75,6 @@ export default function FoodNameScreen() {
       </View>
       
       <View style={styles.buttonContainer}>
-        <Link href="/" asChild>
-          <TouchableOpacity style={styles.button}>
-            <Text style={styles.buttonText}>Retour</Text>
-          </TouchableOpacity>
-        </Link>
-        
         {foodName.trim() && (
           <TouchableOpacity 
             style={[styles.button, styles.nextButton]}

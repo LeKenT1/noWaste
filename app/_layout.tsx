@@ -7,6 +7,8 @@ import * as TaskManager from 'expo-task-manager';
 import * as BackgroundFetch from 'expo-background-fetch';
 import Realm from 'realm';
 import realmConfig from '../database/realmConfig';
+import { registerForPushNotificationsAsync } from '../services/notifications';
+import Navigation from '../navigation';
 
 const BACKGROUND_TASK = "check-expiring-aliments";
 
@@ -51,38 +53,13 @@ async function registerBackgroundTask() {
   }
 }
 
-export default function RootLayout() {
+export default function App(): JSX.Element {
   useEffect(() => {
-    async function setupNotifications() {
-      Notifications.setNotificationHandler({
-        handleNotification: async () => ({
-          shouldShowAlert: true,
-          shouldPlaySound: true,
-          shouldSetBadge: true,
-        }),
-      });
-      const { status } = await Notifications.requestPermissionsAsync();
-      if (status !== 'granted') {
-        alert('Permission for notifications is required!');
-        return;
-      }
-
-      await registerBackgroundTask();
-      const scheduled = await Notifications.getAllScheduledNotificationsAsync();
-    }
-
+    const setupNotifications = async (): Promise<void> => {
+      await registerForPushNotificationsAsync();
+    };
     setupNotifications();
   }, []);
 
-  return (
-    <SafeAreaProvider>
-      <StatusBar style="auto" />
-      <Stack
-        screenOptions={{
-          headerShown: false,
-          contentStyle: { backgroundColor: 'white' }
-        }}
-      />
-    </SafeAreaProvider>
-  );
+  return <Navigation />;
 }
